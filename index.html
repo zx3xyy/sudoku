@@ -7,19 +7,19 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>AI Escargot - Note Mode</title>
+    <title>Sudoku Dojo (Infinite)</title>
     <style>
         :root {
-            --bg-color: #1a1a1a;
-            --board-bg: #ffffff;
+            --bg-color: #f2f2f7;
+            --board-bg: #fff;
             --accent-color: #007AFF;
             --note-active: #FF9500;
-            /* Orange for Note Mode */
-            --highlight-bg: #e2e8f0;
-            --selected-bg: #bbd6fb;
-            --same-num-bg: #cbdbf1;
-            --border-color: #333;
-            --border-light: #bec6d4;
+            --highlight-bg: #e4eefd;
+            --related-bg: #f0f0f0;
+            --selected-bg: #b3d7ff;
+            --text-color: #000;
+            --err-color: #ff3b30;
+            --border-color: #000;
         }
 
         body {
@@ -31,20 +31,69 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: #fff;
+            color: var(--text-color);
             touch-action: manipulation;
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* Board */
+        .header {
+            width: 94vw;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #e5e5ea;
+            color: #8e8e93;
+        }
+
+        .badge.training {
+            background: #e0f2fe;
+            color: #007AFF;
+        }
+
+        .tip-text {
+            font-size: 0.85rem;
+            color: #444;
+            margin-top: 8px;
+            line-height: 1.4;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+
         .board-container {
             width: 94vw;
             max-width: 400px;
             aspect-ratio: 1;
             background: var(--border-color);
-            padding: 2px;
+            border: 2px solid var(--border-color);
             border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
 
         .grid {
@@ -68,20 +117,35 @@
             justify-content: center;
         }
 
-        /* Value Layer (Big Number) */
+        .cell.related {
+            background-color: var(--related-bg);
+        }
+
+        .cell.highlight {
+            background-color: var(--highlight-bg);
+        }
+
+        .cell.selected {
+            background-color: var(--selected-bg) !important;
+        }
+
+        .cell.error {
+            background-color: rgba(255, 59, 48, 0.2) !important;
+            color: var(--err-color) !important;
+        }
+
         .cell-value {
             font-size: 1.6rem;
-            font-weight: 500;
+            font-weight: 400;
             color: var(--accent-color);
             z-index: 2;
         }
 
         .cell.fixed .cell-value {
             color: #000;
-            font-weight: 700;
+            font-weight: 600;
         }
 
-        /* Candidate Layer (Small Numbers) */
         .candidate-grid {
             position: absolute;
             top: 0;
@@ -99,13 +163,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 9px;
-            color: #555;
-            font-weight: 600;
+            font-size: 8px;
+            color: #666;
+            font-weight: 700;
             line-height: 1;
         }
 
-        /* Borders */
         .cell:nth-child(3n) {
             border-right: 2px solid var(--border-color);
         }
@@ -119,92 +182,154 @@
             border-bottom: 2px solid var(--border-color);
         }
 
-        /* States */
-        .cell.fixed {
-            background-color: #f0f0f0;
-        }
-
-        .cell.selected {
-            background-color: var(--selected-bg) !important;
-        }
-
-        .cell.highlight {
-            background-color: var(--same-num-bg);
-        }
-
-        .cell.error {
-            background-color: #ffcccc !important;
-        }
-
-        /* Controls */
         .controls {
             width: 94vw;
             max-width: 400px;
             margin-top: 20px;
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn {
-            background: rgba(255, 255, 255, 0.15);
+            background: #fff;
             border: none;
             border-radius: 8px;
-            color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            color: var(--accent-color);
             font-size: 1.5rem;
-            height: 55px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.1s;
         }
 
         .btn:active {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(0.96);
-        }
-
-        /* Special Buttons */
-        .btn-note {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #aaa;
-            border: 1px solid transparent;
-        }
-
-        .btn-note.active {
-            color: #fff;
-            background: var(--note-active);
-            box-shadow: 0 0 8px var(--note-active);
-            border-color: #fff;
+            transform: scale(0.95);
+            background: #f2f2f2;
         }
 
         .btn-del {
-            color: #ff453a;
+            color: var(--err-color);
             font-size: 1rem;
             font-weight: 600;
         }
 
-        .bottom-actions {
+        .menu-bar {
+            width: 94vw;
+            max-width: 400px;
             margin-top: 15px;
             display: flex;
-            gap: 20px;
+            gap: 10px;
         }
 
-        .action-sm {
-            padding: 0 24px;
-            font-size: 1rem;
+        .action-btn {
+            flex: 1;
             height: 44px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .btn-new {
+            background: var(--accent-color);
+        }
+
+        .btn-note {
+            background: #fff;
+            color: #8e8e93;
+            border: 1px solid #c7c7cc;
+        }
+
+        .btn-note.active {
+            background: var(--note-active);
+            color: #fff;
+            border: none;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal {
+            background: #f2f2f7;
+            padding: 20px;
+            border-radius: 16px;
+            width: 85%;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            margin: 15px 0 8px;
+            color: #666;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .level-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            background: #fff;
+            color: #000;
+            text-align: left;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .level-btn.highlight {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .level-btn span {
+            font-size: 0.75rem;
+            color: #888;
+            font-weight: 400;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .arrow {
+            position: absolute;
+            right: 15px;
+            color: #ccc;
         }
     </style>
 </head>
 
 <body>
 
-    <div
-        style="display:flex; justify-content:space-between; width:94vw; max-width:400px; align-items:center; margin-bottom:10px;">
-        <h1 style="margin:0; font-size:1.2rem; color:#ddd;">AI Escargot</h1>
-        <div style="font-size:0.8rem; color:#666;">Extreme</div>
+    <div class="header">
+        <div class="header-top">
+            <h1>Sudoku Dojo</h1>
+            <div class="badge" id="diffLabel">Random</div>
+        </div>
+        <div class="tip-text" id="tipText"></div>
     </div>
 
     <div class="board-container">
@@ -217,7 +342,6 @@
         <button class="btn" onclick="inputNum(3)">3</button>
         <button class="btn" onclick="inputNum(4)">4</button>
         <button class="btn" onclick="inputNum(5)">5</button>
-
         <button class="btn" onclick="inputNum(6)">6</button>
         <button class="btn" onclick="inputNum(7)">7</button>
         <button class="btn" onclick="inputNum(8)">8</button>
@@ -225,198 +349,337 @@
         <button class="btn btn-del" onclick="inputNum(0)">Del</button>
     </div>
 
-    <div class="controls" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
-        <button class="btn btn-note" id="btnNote" onclick="toggleNoteMode()">✎ Note: OFF</button>
-        <button class="btn" style="font-size:1rem; color:#32d74b;" onclick="checkBoard()">Check</button>
+    <div class="menu-bar">
+        <button class="action-btn btn-note" id="btnNote" onclick="toggleNoteMode()">✎ Note</button>
+        <button class="action-btn btn-new" onclick="showNewGameModal()">New / Practice</button>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2 style="margin-top:0;">Game Menu</h2>
+
+            <h3>Random Puzzles</h3>
+            <button class="level-btn" onclick="startRandom('easy')">Casual (Easy)</button>
+            <button class="level-btn" onclick="startRandom('medium')">Normal (Medium)</button>
+            <button class="level-btn" onclick="startRandom('hard')">Challenge (Hard)</button>
+
+            <h3>Technique Training (Infinite)</h3>
+            <button class="level-btn highlight" onclick="startPreset('xwing')">
+                X-Wing
+                <span>寻找 "二链列" (Target varies)</span> <span class="arrow">↻</span>
+            </button>
+            <button class="level-btn highlight" onclick="startPreset('ywing')">
+                Y-Wing (XY-Wing)
+                <span>三格强关联逻辑</span> <span class="arrow">↻</span>
+            </button>
+            <button class="level-btn highlight" onclick="startPreset('swordfish')">
+                Swordfish
+                <span>3x3 完美鱼形态</span> <span class="arrow">↻</span>
+            </button>
+
+            <button class="level-btn" style="background:transparent; color:#ff3b30; text-align:center; margin-top:10px;"
+                onclick="closeModal()">Cancel</button>
+        </div>
     </div>
 
     <script>
-        const puzzleString = "1.......2.9.4...5...6...7...5.9.3.......7.......85..4.7.....6...3...9.8...2.....1";
-        let grid = [];
-        let selectedIndex = -1;
-        let isNoteMode = false;
+        // --- Master Templates (Valid Puzzles) ---
+        // We will shuffle/rotate these to create infinite variations
+        const MASTERS = {
+            'xwing': {
+                name: 'X-Wing',
+                puzzle: "100000569492056108056109240009640801064010020218035604040500016905861402621400050",
+                target: 7, // Original target number
+                tip: "💡 提示：本题的突破口是数字 {n}。寻找两行，其中 {n} 都只出现在相同的两列中（构成矩形）。"
+            },
+            'ywing': {
+                name: 'Y-Wing',
+                puzzle: "000000000904607000076804100309701080008000300050308702007502610000403507000000000",
+                target: null, // Y-Wing involves 3 numbers, generic tip used
+                tip: "💡 提示：寻找三个格子的连锁：一个枢纽格 (Pivot) 和两个夹钳格 (Pincer)。如果你发现 (A,B), (B,C), (A,C) 的结构，就能排除共同影响区的 C。"
+            },
+            'swordfish': {
+                name: 'Swordfish',
+                puzzle: "000090000000000000000005200020700050508000701070002080001900000000000000000040000",
+                target: 3, // Original target number
+                tip: "💡 提示：本题的关键是数字 {n}。寻找 {n} 在三行中，分别只出现在完全相同的三个列里（Swordfish形态）。"
+            }
+        };
+
+        // --- Core Solver (MRV Optimized) ---
+        const BLANK = 0;
+        function isValid(board, row, col, num) {
+            for (let x = 0; x < 9; x++) if (board[row][x] === num || board[x][col] === num) return false;
+            const startRow = row - row % 3, startCol = col - col % 3;
+            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (board[i + startRow][j + startCol] === num) return false;
+            return true;
+        }
+
+        function solveSudoku(board) {
+            let bestRow = -1, bestCol = -1, minCandidates = 10;
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    if (board[r][c] === BLANK) {
+                        let count = 0;
+                        for (let n = 1; n <= 9; n++) if (isValid(board, r, c, n)) count++;
+                        if (count === 0) return false;
+                        if (count < minCandidates) { minCandidates = count; bestRow = r; bestCol = c; }
+                    }
+                }
+                if (minCandidates === 1) break;
+            }
+            if (bestRow === -1) return true;
+            for (let num = 1; num <= 9; num++) {
+                if (isValid(board, bestRow, bestCol, num)) {
+                    board[bestRow][bestCol] = num;
+                    if (solveSudoku(board)) return true;
+                    board[bestRow][bestCol] = BLANK;
+                }
+            }
+            return false;
+        }
+
+        // --- Permutation Engine (The Magic) ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function transformBoard(puzzleStr, originalTarget) {
+            // 1. Parse
+            let board = [];
+            let r = [], c_idx = 0;
+            for (let i = 0; i < 81; i++) {
+                r.push(parseInt(puzzleStr[i]));
+                if (r.length === 9) { board.push(r); r = []; }
+            }
+
+            // 2. Number Mapping (Permutation)
+            // e.g. map 7 -> 3, then 7s becomes 3s
+            let mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // 0 is unused
+            let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            shuffleArray(nums);
+            let mapObj = {};
+            for (let i = 1; i <= 9; i++) mapObj[i] = nums[i - 1];
+
+            let newTarget = originalTarget ? mapObj[originalTarget] : null;
+
+            // Apply mapping
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] !== 0) {
+                        board[row][col] = mapObj[board[row][col]];
+                    }
+                }
+            }
+
+            // 3. Rotation (Random 0, 90, 180, 270)
+            // Rotation preserves logic.
+            const rotations = Math.floor(Math.random() * 4);
+            for (let k = 0; k < rotations; k++) {
+                // Rotate 90 deg clockwise: new[i][j] = old[8-j][i]
+                let newBoard = Array.from({ length: 9 }, () => Array(9).fill(0));
+                for (let i = 0; i < 9; i++) {
+                    for (let j = 0; j < 9; j++) {
+                        newBoard[j][8 - i] = board[i][j];
+                    }
+                }
+                board = newBoard;
+            }
+
+            // 4. Solve for new solution
+            // Since we permuted, the old solution string is invalid. We must re-solve.
+            // MRV solver is fast enough (<50ms).
+            let solutionBoard = board.map(row => [...row]); // Deep copy
+            solveSudoku(solutionBoard);
+
+            return {
+                puzzle: board,
+                solution: solutionBoard,
+                newTarget: newTarget
+            };
+        }
+
+        // --- Generator (Random) ---
+        function generateRandomBoard(difficulty) {
+            let board = Array.from({ length: 9 }, () => Array(9).fill(0));
+            for (let i = 0; i < 9; i = i + 3) {
+                let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
+                for (let row = 0; row < 3; row++) for (let col = 0; col < 3; col++) board[i + row][i + col] = nums.pop();
+            }
+            solveSudoku(board);
+            const solution = board.map(row => [...row]);
+
+            let attempts = difficulty === 'easy' ? 30 : difficulty === 'medium' ? 45 : 52;
+            while (attempts > 0) {
+                let r = Math.floor(Math.random() * 9), c = Math.floor(Math.random() * 9);
+                while (board[r][c] === 0) { r = Math.floor(Math.random() * 9); c = Math.floor(Math.random() * 9); }
+                board[r][c] = 0;
+                attempts--;
+            }
+            return { puzzle: board, solution: solution };
+        }
+
+        // --- State & UI ---
+        let gameState = {
+            puzzle: [],
+            solution: [],
+            userGrid: [],
+            selectedIndex: -1,
+            isNoteMode: false
+        };
 
         const gridEl = document.getElementById('grid');
-        const btnNote = document.getElementById('btnNote');
+        const modal = document.getElementById('modal');
+        const diffLabel = document.getElementById('diffLabel');
+        const tipText = document.getElementById('tipText');
 
-        function init() {
+        function initGridUI() {
             gridEl.innerHTML = '';
-            grid = [];
             for (let i = 0; i < 81; i++) {
-                const char = puzzleString[i];
-                const isFixed = char !== '.';
-                const val = isFixed ? parseInt(char) : 0;
-
-                // Data Structure: val (big num), candidates (set of small nums)
-                grid.push({
-                    val: val,
-                    fixed: isFixed,
-                    candidates: new Set()
-                });
-
                 const cell = document.createElement('div');
-                cell.className = `cell ${isFixed ? 'fixed' : ''}`;
+                cell.className = 'cell';
                 cell.dataset.index = i;
                 cell.onclick = () => selectCell(i);
-
-                // Create DOM structure
-                renderCellContent(cell, grid[i]);
                 gridEl.appendChild(cell);
             }
         }
 
-        function renderCellContent(cellEl, cellData) {
-            cellEl.innerHTML = '';
+        function renderCell(index) {
+            const cell = gridEl.children[index];
+            const data = gameState.userGrid[index];
+            const r = Math.floor(index / 9), c = index % 9;
+            const fixed = gameState.puzzle[r][c] !== 0;
 
-            // If it has a value (Fixed or User input), show Big Number
-            if (cellData.val !== 0) {
+            cell.innerHTML = '';
+            cell.className = `cell ${fixed ? 'fixed' : ''}`;
+
+            if (data.val !== 0) {
                 const valDiv = document.createElement('div');
                 valDiv.className = 'cell-value';
-                valDiv.innerText = cellData.val;
-                cellEl.appendChild(valDiv);
-            }
-            // Otherwise, show Candidates grid
-            else {
+                valDiv.innerText = data.val;
+                cell.appendChild(valDiv);
+            } else {
                 const candGrid = document.createElement('div');
                 candGrid.className = 'candidate-grid';
-                for (let num = 1; num <= 9; num++) {
-                    const numSpan = document.createElement('div');
-                    numSpan.className = 'cand-num';
-                    // Only show text if number is in candidates Set
-                    if (cellData.candidates.has(num)) {
-                        numSpan.innerText = num;
-                    }
-                    candGrid.appendChild(numSpan);
+                for (let n = 1; n <= 9; n++) {
+                    const sp = document.createElement('div');
+                    sp.className = 'cand-num';
+                    if (data.notes.has(n)) sp.innerText = n;
+                    candGrid.appendChild(sp);
                 }
-                cellEl.appendChild(candGrid);
+                cell.appendChild(candGrid);
             }
         }
 
         function selectCell(index) {
-            selectedIndex = index;
-            const currentVal = grid[index].val;
-            const cells = document.querySelectorAll('.cell');
+            gameState.selectedIndex = index;
+            const r = Math.floor(index / 9), c = index % 9;
+            const val = gameState.userGrid[index].val;
 
-            cells.forEach((c, i) => {
-                c.classList.remove('selected', 'highlight');
-                if (i === index) c.classList.add('selected');
-
-                // Highlight same big numbers (ignore candidates for highlighting)
-                if (currentVal !== 0 && grid[i].val === currentVal) {
-                    c.classList.add('highlight');
+            Array.from(gridEl.children).forEach((cell, idx) => {
+                cell.classList.remove('selected', 'highlight', 'related', 'error');
+                const cr = Math.floor(idx / 9), cc = idx % 9;
+                if (idx === index) cell.classList.add('selected');
+                else if (cr === r || cc === c || (Math.floor(cr / 3) === Math.floor(r / 3) && Math.floor(cc / 3) === Math.floor(c / 3))) {
+                    cell.classList.add('related');
+                }
+                if (val !== 0 && gameState.userGrid[idx].val === val) cell.classList.add('highlight');
+                if (gameState.userGrid[idx].val !== 0 && gameState.userGrid[idx].val !== gameState.solution[cr][cc]) {
+                    cell.classList.add('error');
                 }
             });
         }
 
-        function toggleNoteMode() {
-            isNoteMode = !isNoteMode;
-            if (isNoteMode) {
-                btnNote.classList.add('active');
-                btnNote.innerText = "✎ Note: ON";
-            } else {
-                btnNote.classList.remove('active');
-                btnNote.innerText = "✎ Note: OFF";
-            }
-        }
-
         function inputNum(num) {
-            if (selectedIndex === -1) return;
-            const cellData = grid[selectedIndex];
-            if (cellData.fixed) return;
+            if (gameState.selectedIndex === -1) return;
+            const idx = gameState.selectedIndex;
+            const r = Math.floor(idx / 9), c = idx % 9;
+            if (gameState.puzzle[r][c] !== 0) return;
 
-            const cellEl = document.querySelectorAll('.cell')[selectedIndex];
-
-            // DELETE BUTTON logic
-            if (num === 0) {
-                cellData.val = 0;
-                // Usually Del doesn't clear candidates unless we want it to. 
-                // Let's keep candidates but clear big val.
-                renderCellContent(cellEl, cellData);
-                cellEl.classList.remove('error');
-                selectCell(selectedIndex); // refresh highlights
-                return;
-            }
-
-            if (isNoteMode) {
-                // NOTE MODE: Toggle candidate
-                // If a big value exists, usually users want to clear it first, 
-                // but let's allow toggling candidates "behind" the value or ignore?
-                // Convention: If big value exists, don't edit candidates until value is deleted.
-                if (cellData.val === 0) {
-                    if (cellData.candidates.has(num)) {
-                        cellData.candidates.delete(num);
-                    } else {
-                        cellData.candidates.add(num);
-                    }
-                    renderCellContent(cellEl, cellData);
+            const data = gameState.userGrid[idx];
+            if (num === 0) { data.val = 0; }
+            else if (gameState.isNoteMode) {
+                if (data.val === 0) {
+                    if (data.notes.has(num)) data.notes.delete(num); else data.notes.add(num);
                 }
             } else {
-                // NORMAL MODE: Set Value
-                // If clicking the same number again, maybe clear it? (Optional)
-                if (cellData.val === num) {
-                    cellData.val = 0;
-                } else {
-                    cellData.val = num;
-                    // Optional: Clear candidates in this cell when value is set?
-                    // cellData.candidates.clear(); 
-                }
-                renderCellContent(cellEl, cellData);
-                selectCell(selectedIndex); // re-trigger highlight for new number
+                if (data.val === num) data.val = 0; else data.val = num;
             }
-
-            cellEl.classList.remove('error');
+            renderCell(idx);
+            selectCell(idx);
+            checkWin();
         }
 
-        function checkBoard() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(c => c.classList.remove('error'));
+        function toggleNoteMode() {
+            gameState.isNoteMode = !gameState.isNoteMode;
+            document.getElementById('btnNote').classList.toggle('active', gameState.isNoteMode);
+        }
 
-            let isValid = true;
-            let isComplete = true;
-
-            // Validation Helper
-            const checkGroup = (indices) => {
-                let seen = {};
-                indices.forEach(idx => {
-                    const val = grid[idx].val;
-                    if (val !== 0) {
-                        if (seen[val]) {
-                            cells[idx].classList.add('error');
-                            cells[seen[val]].classList.add('error');
-                            isValid = false;
-                        } else {
-                            seen[val] = idx;
-                        }
-                    } else {
-                        isComplete = false;
-                    }
-                });
-            };
-
-            // Check Rows, Cols, Boxes
-            for (let i = 0; i < 9; i++) {
-                let r = [], c = [];
-                for (let j = 0; j < 9; j++) { r.push(i * 9 + j); c.push(j * 9 + i); }
-                checkGroup(r); checkGroup(c);
+        function checkWin() {
+            let filled = 0, correct = 0;
+            for (let i = 0; i < 81; i++) {
+                const r = Math.floor(i / 9), c = i % 9;
+                const val = gameState.userGrid[i].val;
+                if (val !== 0) { filled++; if (val === gameState.solution[r][c]) correct++; }
             }
-            for (let br = 0; br < 3; br++) {
-                for (let bc = 0; bc < 3; bc++) {
-                    let box = [];
-                    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) box.push((br * 3 + i) * 9 + (bc * 3 + j));
-                    checkGroup(box);
+            if (filled === 81 && correct === 81) setTimeout(() => alert("🎉 Solved!"), 100);
+        }
+
+        function startGame(puzzleBoard, solutionBoard, label, tip) {
+            gameState.puzzle = puzzleBoard;
+            gameState.solution = solutionBoard;
+            gameState.userGrid = [];
+
+            for (let r = 0; r < 9; r++) {
+                for (let c = 0; c < 9; c++) {
+                    gameState.userGrid.push({ val: gameState.puzzle[r][c], notes: new Set() });
                 }
             }
 
-            if (isValid && isComplete) {
-                setTimeout(() => alert("🎉 Solved! 你是神！"), 10);
-            } else if (isValid) {
-                // alert("So far so good (Available filled cells are correct)");
+            diffLabel.innerText = label;
+            diffLabel.className = label.includes('Training') ? 'badge training' : 'badge';
+
+            if (tip) {
+                tipText.innerHTML = tip; // Use innerHTML to handle dynamic vars
+                tipText.style.display = 'block';
             } else {
-                // alert("Mistakes found!");
+                tipText.style.display = 'none';
             }
+
+            gameState.selectedIndex = -1;
+            for (let i = 0; i < 81; i++) renderCell(i);
+            closeModal();
         }
 
-        init();
+        function startRandom(diff) {
+            const data = generateRandomBoard(diff);
+            const label = diff.charAt(0).toUpperCase() + diff.slice(1);
+            startGame(data.puzzle, data.solution, label, null);
+        }
+
+        function startPreset(key) {
+            const master = MASTERS[key];
+            // Generate a new permutation
+            const data = transformBoard(master.puzzle, master.target);
+
+            let tip = master.tip;
+            if (data.newTarget) {
+                tip = tip.replace('{n}', `<b>${data.newTarget}</b>`).replace('{n}', `<b>${data.newTarget}</b>`);
+            }
+
+            startGame(data.puzzle, data.solution, master.name + " Training", tip);
+        }
+
+        function showNewGameModal() { modal.style.display = 'flex'; }
+        function closeModal() { modal.style.display = 'none'; }
+
+        initGridUI();
+        startRandom('medium');
+
     </script>
 </body>
 
