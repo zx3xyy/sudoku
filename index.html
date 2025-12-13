@@ -7,25 +7,23 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>AI Escargot - Hardest Sudoku</title>
+    <title>AI Escargot - Note Mode</title>
     <style>
         :root {
             --bg-color: #1a1a1a;
             --board-bg: #ffffff;
-            --text-color: #333;
             --accent-color: #007AFF;
-            /* iOS Blue */
+            --note-active: #FF9500;
+            /* Orange for Note Mode */
             --highlight-bg: #e2e8f0;
             --selected-bg: #bbd6fb;
             --same-num-bg: #cbdbf1;
-            --fixed-text: #000;
-            --user-text: #007AFF;
             --border-color: #333;
             --border-light: #bec6d4;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             background-color: var(--bg-color);
             margin: 0;
             height: 100vh;
@@ -35,18 +33,10 @@
             justify-content: center;
             color: #fff;
             touch-action: manipulation;
-            /* Prevent double-tap zoom */
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        h1 {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: #ddd;
-        }
-
-        /* Board Container */
+        /* Board */
         .board-container {
             width: 94vw;
             max-width: 400px;
@@ -70,17 +60,52 @@
 
         .cell {
             background: #fff;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 500;
-            cursor: pointer;
-            user-select: none;
-            position: relative;
         }
 
-        /* Thicker borders for 3x3 zones */
+        /* Value Layer (Big Number) */
+        .cell-value {
+            font-size: 1.6rem;
+            font-weight: 500;
+            color: var(--accent-color);
+            z-index: 2;
+        }
+
+        .cell.fixed .cell-value {
+            color: #000;
+            font-weight: 700;
+        }
+
+        /* Candidate Layer (Small Numbers) */
+        .candidate-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .cand-num {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 9px;
+            color: #555;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        /* Borders */
         .cell:nth-child(3n) {
             border-right: 2px solid var(--border-color);
         }
@@ -89,46 +114,14 @@
             border-right: none;
         }
 
-        /* Edge case fix */
         .cell:nth-child(n+19):nth-child(-n+27),
         .cell:nth-child(n+46):nth-child(-n+54) {
             border-bottom: 2px solid var(--border-color);
         }
 
-        /* Specific CSS grid gap fix for inner borders logic */
-        .grid {
-            gap: 0;
-        }
-
-        .cell {
-            border: 1px solid var(--border-light);
-            border-top: none;
-            border-left: none;
-        }
-
-        /* Restore thick borders manually */
-        .cell:nth-child(3n) {
-            border-right: 2px solid var(--border-color);
-        }
-
-        .cell:nth-child(9n) {
-            border-right: 1px solid var(--border-light);
-        }
-
-        .grid>div:nth-child(n+19):nth-child(-n+27),
-        .grid>div:nth-child(n+46):nth-child(-n+54) {
-            border-bottom: 2px solid var(--border-color);
-        }
-
         /* States */
         .cell.fixed {
-            color: var(--fixed-text);
-            font-weight: 700;
             background-color: #f0f0f0;
-        }
-
-        .cell.user-filled {
-            color: var(--user-text);
         }
 
         .cell.selected {
@@ -140,8 +133,7 @@
         }
 
         .cell.error {
-            background-color: #ffcccc;
-            color: #d00;
+            background-color: #ffcccc !important;
         }
 
         /* Controls */
@@ -154,8 +146,8 @@
             gap: 8px;
         }
 
-        .numpad-btn {
-            background: rgba(255, 255, 255, 0.1);
+        .btn {
+            background: rgba(255, 255, 255, 0.15);
             border: none;
             border-radius: 8px;
             color: #fff;
@@ -164,63 +156,88 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: background 0.1s;
+            transition: all 0.1s;
         }
 
-        .numpad-btn:active {
+        .btn:active {
             background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.96);
         }
 
-        .action-btn {
+        /* Special Buttons */
+        .btn-note {
             font-size: 1rem;
-            color: #ff9500;
+            font-weight: 600;
+            color: #aaa;
+            border: 1px solid transparent;
+        }
+
+        .btn-note.active {
+            color: #fff;
+            background: var(--note-active);
+            box-shadow: 0 0 8px var(--note-active);
+            border-color: #fff;
+        }
+
+        .btn-del {
+            color: #ff453a;
+            font-size: 1rem;
             font-weight: 600;
         }
 
-        .check-btn {
-            color: #32d74b;
+        .bottom-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .action-sm {
+            padding: 0 24px;
+            font-size: 1rem;
+            height: 44px;
         }
     </style>
 </head>
 
 <body>
 
-    <h1>AI Escargot (Extreme)</h1>
+    <div
+        style="display:flex; justify-content:space-between; width:94vw; max-width:400px; align-items:center; margin-bottom:10px;">
+        <h1 style="margin:0; font-size:1.2rem; color:#ddd;">AI Escargot</h1>
+        <div style="font-size:0.8rem; color:#666;">Extreme</div>
+    </div>
 
     <div class="board-container">
         <div class="grid" id="grid"></div>
     </div>
 
     <div class="controls">
-        <button class="numpad-btn" onclick="inputNum(1)">1</button>
-        <button class="numpad-btn" onclick="inputNum(2)">2</button>
-        <button class="numpad-btn" onclick="inputNum(3)">3</button>
-        <button class="numpad-btn" onclick="inputNum(4)">4</button>
-        <button class="numpad-btn" onclick="inputNum(5)">5</button>
+        <button class="btn" onclick="inputNum(1)">1</button>
+        <button class="btn" onclick="inputNum(2)">2</button>
+        <button class="btn" onclick="inputNum(3)">3</button>
+        <button class="btn" onclick="inputNum(4)">4</button>
+        <button class="btn" onclick="inputNum(5)">5</button>
 
-        <button class="numpad-btn" onclick="inputNum(6)">6</button>
-        <button class="numpad-btn" onclick="inputNum(7)">7</button>
-        <button class="numpad-btn" onclick="inputNum(8)">8</button>
-        <button class="numpad-btn" onclick="inputNum(9)">9</button>
-        <button class="numpad-btn action-btn" onclick="inputNum(0)">Del</button>
+        <button class="btn" onclick="inputNum(6)">6</button>
+        <button class="btn" onclick="inputNum(7)">7</button>
+        <button class="btn" onclick="inputNum(8)">8</button>
+        <button class="btn" onclick="inputNum(9)">9</button>
+        <button class="btn btn-del" onclick="inputNum(0)">Del</button>
     </div>
 
-    <div style="margin-top:15px; display:flex; gap:20px;">
-        <button class="numpad-btn check-btn" style="padding: 0 20px; font-size:1rem;"
-            onclick="checkBoard()">Check</button>
-        <button class="numpad-btn action-btn" style="padding: 0 20px; font-size:1rem; color:#ff453a"
-            onclick="resetBoard()">Reset</button>
+    <div class="controls" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
+        <button class="btn btn-note" id="btnNote" onclick="toggleNoteMode()">✎ Note: OFF</button>
+        <button class="btn" style="font-size:1rem; color:#32d74b;" onclick="checkBoard()">Check</button>
     </div>
 
     <script>
-        // Arto Inkala's "AI Escargot"
         const puzzleString = "1.......2.9.4...5...6...7...5.9.3.......7.......85..4.7.....6...3...9.8...2.....1";
-
-        let grid = []; // Stores current state
+        let grid = [];
         let selectedIndex = -1;
+        let isNoteMode = false;
 
         const gridEl = document.getElementById('grid');
+        const btnNote = document.getElementById('btnNote');
 
         function init() {
             gridEl.innerHTML = '';
@@ -230,65 +247,134 @@
                 const isFixed = char !== '.';
                 const val = isFixed ? parseInt(char) : 0;
 
-                grid.push({ val: val, fixed: isFixed, id: i });
+                // Data Structure: val (big num), candidates (set of small nums)
+                grid.push({
+                    val: val,
+                    fixed: isFixed,
+                    candidates: new Set()
+                });
 
                 const cell = document.createElement('div');
-                cell.classList.add('cell');
-                if (isFixed) {
-                    cell.classList.add('fixed');
-                    cell.innerText = val;
-                }
+                cell.className = `cell ${isFixed ? 'fixed' : ''}`;
                 cell.dataset.index = i;
                 cell.onclick = () => selectCell(i);
+
+                // Create DOM structure
+                renderCellContent(cell, grid[i]);
                 gridEl.appendChild(cell);
+            }
+        }
+
+        function renderCellContent(cellEl, cellData) {
+            cellEl.innerHTML = '';
+
+            // If it has a value (Fixed or User input), show Big Number
+            if (cellData.val !== 0) {
+                const valDiv = document.createElement('div');
+                valDiv.className = 'cell-value';
+                valDiv.innerText = cellData.val;
+                cellEl.appendChild(valDiv);
+            }
+            // Otherwise, show Candidates grid
+            else {
+                const candGrid = document.createElement('div');
+                candGrid.className = 'candidate-grid';
+                for (let num = 1; num <= 9; num++) {
+                    const numSpan = document.createElement('div');
+                    numSpan.className = 'cand-num';
+                    // Only show text if number is in candidates Set
+                    if (cellData.candidates.has(num)) {
+                        numSpan.innerText = num;
+                    }
+                    candGrid.appendChild(numSpan);
+                }
+                cellEl.appendChild(candGrid);
             }
         }
 
         function selectCell(index) {
             selectedIndex = index;
-            const cells = document.querySelectorAll('.cell');
             const currentVal = grid[index].val;
+            const cells = document.querySelectorAll('.cell');
 
             cells.forEach((c, i) => {
                 c.classList.remove('selected', 'highlight');
                 if (i === index) c.classList.add('selected');
 
-                // Highlight same numbers
+                // Highlight same big numbers (ignore candidates for highlighting)
                 if (currentVal !== 0 && grid[i].val === currentVal) {
                     c.classList.add('highlight');
                 }
             });
         }
 
+        function toggleNoteMode() {
+            isNoteMode = !isNoteMode;
+            if (isNoteMode) {
+                btnNote.classList.add('active');
+                btnNote.innerText = "✎ Note: ON";
+            } else {
+                btnNote.classList.remove('active');
+                btnNote.innerText = "✎ Note: OFF";
+            }
+        }
+
         function inputNum(num) {
             if (selectedIndex === -1) return;
-            if (grid[selectedIndex].fixed) return;
+            const cellData = grid[selectedIndex];
+            if (cellData.fixed) return;
 
-            grid[selectedIndex].val = num;
-            const cell = document.querySelectorAll('.cell')[selectedIndex];
+            const cellEl = document.querySelectorAll('.cell')[selectedIndex];
 
+            // DELETE BUTTON logic
             if (num === 0) {
-                cell.innerText = '';
-                cell.classList.remove('user-filled');
-            } else {
-                cell.innerText = num;
-                cell.classList.add('user-filled');
+                cellData.val = 0;
+                // Usually Del doesn't clear candidates unless we want it to. 
+                // Let's keep candidates but clear big val.
+                renderCellContent(cellEl, cellData);
+                cellEl.classList.remove('error');
+                selectCell(selectedIndex); // refresh highlights
+                return;
             }
 
-            // Re-trigger selection to update highlights
-            selectCell(selectedIndex);
-            // Clear previous error states on input
-            cell.classList.remove('error');
+            if (isNoteMode) {
+                // NOTE MODE: Toggle candidate
+                // If a big value exists, usually users want to clear it first, 
+                // but let's allow toggling candidates "behind" the value or ignore?
+                // Convention: If big value exists, don't edit candidates until value is deleted.
+                if (cellData.val === 0) {
+                    if (cellData.candidates.has(num)) {
+                        cellData.candidates.delete(num);
+                    } else {
+                        cellData.candidates.add(num);
+                    }
+                    renderCellContent(cellEl, cellData);
+                }
+            } else {
+                // NORMAL MODE: Set Value
+                // If clicking the same number again, maybe clear it? (Optional)
+                if (cellData.val === num) {
+                    cellData.val = 0;
+                } else {
+                    cellData.val = num;
+                    // Optional: Clear candidates in this cell when value is set?
+                    // cellData.candidates.clear(); 
+                }
+                renderCellContent(cellEl, cellData);
+                selectCell(selectedIndex); // re-trigger highlight for new number
+            }
+
+            cellEl.classList.remove('error');
         }
 
         function checkBoard() {
-            // Simple validity check (Row, Col, Box)
             const cells = document.querySelectorAll('.cell');
             cells.forEach(c => c.classList.remove('error'));
 
             let isValid = true;
+            let isComplete = true;
 
-            // Helper to check duplicates in array of indices
+            // Validation Helper
             const checkGroup = (indices) => {
                 let seen = {};
                 indices.forEach(idx => {
@@ -301,51 +387,36 @@
                         } else {
                             seen[val] = idx;
                         }
+                    } else {
+                        isComplete = false;
                     }
                 });
             };
 
-            // Rows & Cols
+            // Check Rows, Cols, Boxes
             for (let i = 0; i < 9; i++) {
-                let rowIndices = [], colIndices = [];
-                for (let j = 0; j < 9; j++) {
-                    rowIndices.push(i * 9 + j);
-                    colIndices.push(j * 9 + i);
-                }
-                checkGroup(rowIndices);
-                checkGroup(colIndices);
+                let r = [], c = [];
+                for (let j = 0; j < 9; j++) { r.push(i * 9 + j); c.push(j * 9 + i); }
+                checkGroup(r); checkGroup(c);
             }
-
-            // 3x3 Boxes
-            for (let boxRow = 0; boxRow < 3; boxRow++) {
-                for (let boxCol = 0; boxCol < 3; boxCol++) {
-                    let boxIndices = [];
-                    for (let i = 0; i < 3; i++) {
-                        for (let j = 0; j < 3; j++) {
-                            const r = boxRow * 3 + i;
-                            const c = boxCol * 3 + j;
-                            boxIndices.push(r * 9 + c);
-                        }
-                    }
-                    checkGroup(boxIndices);
+            for (let br = 0; br < 3; br++) {
+                for (let bc = 0; bc < 3; bc++) {
+                    let box = [];
+                    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) box.push((br * 3 + i) * 9 + (bc * 3 + j));
+                    checkGroup(box);
                 }
             }
 
-            if (isValid && grid.every(c => c.val !== 0)) {
-                alert("Solved! 完美解决！");
+            if (isValid && isComplete) {
+                setTimeout(() => alert("🎉 Solved! 你是神！"), 10);
+            } else if (isValid) {
+                // alert("So far so good (Available filled cells are correct)");
+            } else {
+                // alert("Mistakes found!");
             }
         }
 
-        function resetBoard() {
-            if (confirm('Reset current progress?')) {
-                init();
-                selectedIndex = -1;
-            }
-        }
-
-        // Initialize on load
         init();
-
     </script>
 </body>
 
