@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI Escargot - Hardest Sudoku</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --board-bg: #ffffff;
+            --text-color: #333;
+            --accent-color: #007AFF;
+            /* iOS Blue */
+            --highlight-bg: #e2e8f0;
+            --selected-bg: #bbd6fb;
+            --same-num-bg: #cbdbf1;
+            --fixed-text: #000;
+            --user-text: #007AFF;
+            --border-color: #333;
+            --border-light: #bec6d4;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            touch-action: manipulation;
+            /* Prevent double-tap zoom */
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #ddd;
+        }
+
+        /* Board Container */
+        .board-container {
+            width: 94vw;
+            max-width: 400px;
+            aspect-ratio: 1;
+            background: var(--border-color);
+            padding: 2px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            width: 100%;
+            height: 100%;
+            background: var(--board-bg);
+            gap: 1px;
+            border: 2px solid var(--border-color);
+        }
+
+        .cell {
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        /* Thicker borders for 3x3 zones */
+        .cell:nth-child(3n) {
+            border-right: 2px solid var(--border-color);
+        }
+
+        .cell:nth-child(9n) {
+            border-right: none;
+        }
+
+        /* Edge case fix */
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        /* Specific CSS grid gap fix for inner borders logic */
+        .grid {
+            gap: 0;
+        }
+
+        .cell {
+            border: 1px solid var(--border-light);
+            border-top: none;
+            border-left: none;
+        }
+
+        /* Restore thick borders manually */
+        .cell:nth-child(3n) {
+            border-right: 2px solid var(--border-color);
+        }
+
+        .cell:nth-child(9n) {
+            border-right: 1px solid var(--border-light);
+        }
+
+        .grid>div:nth-child(n+19):nth-child(-n+27),
+        .grid>div:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        /* States */
+        .cell.fixed {
+            color: var(--fixed-text);
+            font-weight: 700;
+            background-color: #f0f0f0;
+        }
+
+        .cell.user-filled {
+            color: var(--user-text);
+        }
+
+        .cell.selected {
+            background-color: var(--selected-bg) !important;
+        }
+
+        .cell.highlight {
+            background-color: var(--same-num-bg);
+        }
+
+        .cell.error {
+            background-color: #ffcccc;
+            color: #d00;
+        }
+
+        /* Controls */
+        .controls {
+            width: 94vw;
+            max-width: 400px;
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+
+        .numpad-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1.5rem;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .numpad-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .action-btn {
+            font-size: 1rem;
+            color: #ff9500;
+            font-weight: 600;
+        }
+
+        .check-btn {
+            color: #32d74b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>AI Escargot (Extreme)</h1>
+
+    <div class="board-container">
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="controls">
+        <button class="numpad-btn" onclick="inputNum(1)">1</button>
+        <button class="numpad-btn" onclick="inputNum(2)">2</button>
+        <button class="numpad-btn" onclick="inputNum(3)">3</button>
+        <button class="numpad-btn" onclick="inputNum(4)">4</button>
+        <button class="numpad-btn" onclick="inputNum(5)">5</button>
+
+        <button class="numpad-btn" onclick="inputNum(6)">6</button>
+        <button class="numpad-btn" onclick="inputNum(7)">7</button>
+        <button class="numpad-btn" onclick="inputNum(8)">8</button>
+        <button class="numpad-btn" onclick="inputNum(9)">9</button>
+        <button class="numpad-btn action-btn" onclick="inputNum(0)">Del</button>
+    </div>
+
+    <div style="margin-top:15px; display:flex; gap:20px;">
+        <button class="numpad-btn check-btn" style="padding: 0 20px; font-size:1rem;"
+            onclick="checkBoard()">Check</button>
+        <button class="numpad-btn action-btn" style="padding: 0 20px; font-size:1rem; color:#ff453a"
+            onclick="resetBoard()">Reset</button>
+    </div>
+
+    <script>
+        // Arto Inkala's "AI Escargot"
+        const puzzleString = "1.......2.9.4...5...6...7...5.9.3.......7.......85..4.7.....6...3...9.8...2.....1";
+
+        let grid = []; // Stores current state
+        let selectedIndex = -1;
+
+        const gridEl = document.getElementById('grid');
+
+        function init() {
+            gridEl.innerHTML = '';
+            grid = [];
+            for (let i = 0; i < 81; i++) {
+                const char = puzzleString[i];
+                const isFixed = char !== '.';
+                const val = isFixed ? parseInt(char) : 0;
+
+                grid.push({ val: val, fixed: isFixed, id: i });
+
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                if (isFixed) {
+                    cell.classList.add('fixed');
+                    cell.innerText = val;
+                }
+                cell.dataset.index = i;
+                cell.onclick = () => selectCell(i);
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function selectCell(index) {
+            selectedIndex = index;
+            const cells = document.querySelectorAll('.cell');
+            const currentVal = grid[index].val;
+
+            cells.forEach((c, i) => {
+                c.classList.remove('selected', 'highlight');
+                if (i === index) c.classList.add('selected');
+
+                // Highlight same numbers
+                if (currentVal !== 0 && grid[i].val === currentVal) {
+                    c.classList.add('highlight');
+                }
+            });
+        }
+
+        function inputNum(num) {
+            if (selectedIndex === -1) return;
+            if (grid[selectedIndex].fixed) return;
+
+            grid[selectedIndex].val = num;
+            const cell = document.querySelectorAll('.cell')[selectedIndex];
+
+            if (num === 0) {
+                cell.innerText = '';
+                cell.classList.remove('user-filled');
+            } else {
+                cell.innerText = num;
+                cell.classList.add('user-filled');
+            }
+
+            // Re-trigger selection to update highlights
+            selectCell(selectedIndex);
+            // Clear previous error states on input
+            cell.classList.remove('error');
+        }
+
+        function checkBoard() {
+            // Simple validity check (Row, Col, Box)
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(c => c.classList.remove('error'));
+
+            let isValid = true;
+
+            // Helper to check duplicates in array of indices
+            const checkGroup = (indices) => {
+                let seen = {};
+                indices.forEach(idx => {
+                    const val = grid[idx].val;
+                    if (val !== 0) {
+                        if (seen[val]) {
+                            cells[idx].classList.add('error');
+                            cells[seen[val]].classList.add('error');
+                            isValid = false;
+                        } else {
+                            seen[val] = idx;
+                        }
+                    }
+                });
+            };
+
+            // Rows & Cols
+            for (let i = 0; i < 9; i++) {
+                let rowIndices = [], colIndices = [];
+                for (let j = 0; j < 9; j++) {
+                    rowIndices.push(i * 9 + j);
+                    colIndices.push(j * 9 + i);
+                }
+                checkGroup(rowIndices);
+                checkGroup(colIndices);
+            }
+
+            // 3x3 Boxes
+            for (let boxRow = 0; boxRow < 3; boxRow++) {
+                for (let boxCol = 0; boxCol < 3; boxCol++) {
+                    let boxIndices = [];
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            const r = boxRow * 3 + i;
+                            const c = boxCol * 3 + j;
+                            boxIndices.push(r * 9 + c);
+                        }
+                    }
+                    checkGroup(boxIndices);
+                }
+            }
+
+            if (isValid && grid.every(c => c.val !== 0)) {
+                alert("Solved! 完美解决！");
+            }
+        }
+
+        function resetBoard() {
+            if (confirm('Reset current progress?')) {
+                init();
+                selectedIndex = -1;
+            }
+        }
+
+        // Initialize on load
+        init();
+
+    </script>
+</body>
+
+</html>
