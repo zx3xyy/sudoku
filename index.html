@@ -1,686 +1,88 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Sudoku Dojo (Infinite)</title>
-    <style>
-        :root {
-            --bg-color: #f2f2f7;
-            --board-bg: #fff;
-            --accent-color: #007AFF;
-            --note-active: #FF9500;
-            --highlight-bg: #e4eefd;
-            --related-bg: #f0f0f0;
-            --selected-bg: #b3d7ff;
-            --text-color: #000;
-            --err-color: #ff3b30;
-            --border-color: #000;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-color);
-            touch-action: manipulation;
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .header {
-            width: 94vw;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 10px;
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-        }
-
-        .badge {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            padding: 4px 8px;
-            border-radius: 6px;
-            background: #e5e5ea;
-            color: #8e8e93;
-        }
-
-        .badge.training {
-            background: #e0f2fe;
-            color: #007AFF;
-        }
-
-        .tip-text {
-            font-size: 0.85rem;
-            color: #444;
-            margin-top: 8px;
-            line-height: 1.4;
-            background: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-color);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            display: none;
-        }
-
-        .board-container {
-            width: 94vw;
-            max-width: 400px;
-            aspect-ratio: 1;
-            background: var(--border-color);
-            border: 2px solid var(--border-color);
-            border-radius: 4px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            grid-template-rows: repeat(9, 1fr);
-            width: 100%;
-            height: 100%;
-            background: var(--board-bg);
-            gap: 1px;
-            border: 2px solid var(--border-color);
-        }
-
-        .cell {
-            background: #fff;
-            position: relative;
-            cursor: pointer;
-            user-select: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .cell.related {
-            background-color: var(--related-bg);
-        }
-
-        .cell.highlight {
-            background-color: var(--highlight-bg);
-        }
-
-        .cell.selected {
-            background-color: var(--selected-bg) !important;
-        }
-
-        .cell.error {
-            background-color: rgba(255, 59, 48, 0.2) !important;
-            color: var(--err-color) !important;
-        }
-
-        .cell-value {
-            font-size: 1.6rem;
-            font-weight: 400;
-            color: var(--accent-color);
-            z-index: 2;
-        }
-
-        .cell.fixed .cell-value {
-            color: #000;
-            font-weight: 600;
-        }
-
-        .candidate-grid {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .cand-num {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 8px;
-            color: #666;
-            font-weight: 700;
-            line-height: 1;
-        }
-
-        .cell:nth-child(3n) {
-            border-right: 2px solid var(--border-color);
-        }
-
-        .cell:nth-child(9n) {
-            border-right: none;
-        }
-
-        .cell:nth-child(n+19):nth-child(-n+27),
-        .cell:nth-child(n+46):nth-child(-n+54) {
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .controls {
-            width: 94vw;
-            max-width: 400px;
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 6px;
-        }
-
-        .btn {
-            background: #fff;
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            color: var(--accent-color);
-            font-size: 1.5rem;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
-            background: #f2f2f2;
-        }
-
-        .btn-del {
-            color: var(--err-color);
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .menu-bar {
-            width: 94vw;
-            max-width: 400px;
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-btn {
-            flex: 1;
-            height: 44px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #fff;
-            cursor: pointer;
-        }
-
-        .btn-new {
-            background: var(--accent-color);
-        }
-
-        .btn-note {
-            background: #fff;
-            color: #8e8e93;
-            border: 1px solid #c7c7cc;
-        }
-
-        .btn-note.active {
-            background: var(--note-active);
-            color: #fff;
-            border: none;
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
-        }
-
-        .modal {
-            background: #f2f2f7;
-            padding: 20px;
-            border-radius: 16px;
-            width: 85%;
-            max-width: 320px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal h3 {
-            margin: 15px 0 8px;
-            color: #666;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-        }
-
-        .level-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 6px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
-            background: #fff;
-            color: #000;
-            text-align: left;
-            padding-left: 15px;
-            position: relative;
-        }
-
-        .level-btn.highlight {
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-
-        .level-btn span {
-            font-size: 0.75rem;
-            color: #888;
-            font-weight: 400;
-            display: block;
-            margin-top: 2px;
-        }
-
-        .arrow {
-            position: absolute;
-            right: 15px;
-            color: #ccc;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#121213" />
+  <meta name="description" content="Sudoku — with notes, trial mode, and hints. Play on any phone." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Sudoku" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='4' y='4' width='92' height='92' rx='10' fill='%23121213'/%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='3'%3E%3Cpath d='M4 36h92M4 68h92M36 4v92M68 4v92'/%3E%3C/g%3E%3Ctext x='20' y='30' font-size='22' fill='%236aaa64' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3E5%3C/text%3E%3Ctext x='52' y='62' font-size='22' fill='%23c9b458' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3E3%3C/text%3E%3Ctext x='82' y='90' font-size='22' fill='%23538d4e' text-anchor='middle' font-family='sans-serif' font-weight='bold'%3E7%3C/text%3E%3C/svg%3E" />
+  <title>Sudoku</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
+  <div id="app">
+    <header>
+      <div class="header-side">
+        <button id="btn-new" class="text-btn">New</button>
+      </div>
+      <h1>Sudoku</h1>
+      <div class="header-side right">
+        <button id="btn-stats" class="icon-btn" aria-label="Statistics and help">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </button>
+        <button id="btn-theme" class="icon-btn" aria-label="Toggle light and dark mode">
+          <svg id="icon-moon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="icon-sun" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </header>
 
-    <div class="header">
-        <div class="header-top">
-            <h1>Sudoku Dojo</h1>
-            <div class="badge" id="diffLabel">Random</div>
-        </div>
-        <div class="tip-text" id="tipText"></div>
+    <div id="statusbar">
+      <span id="difficulty-label">Easy</span>
+      <span id="mistakes">Mistakes: 0</span>
+      <span id="timer">0:00</span>
+      <button id="btn-pause" class="icon-btn" aria-label="Pause">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="5" x2="9" y2="19"/><line x1="15" y1="5" x2="15" y2="19"/></svg>
+      </button>
     </div>
 
-    <div class="board-container">
-        <div class="grid" id="grid"></div>
+    <main>
+      <div id="toast-container" aria-live="polite"></div>
+      <div id="board-wrap">
+        <div id="board" role="grid" aria-label="Sudoku board"></div>
+        <div id="paused-veil" class="hidden">Paused</div>
+      </div>
+
+      <div id="controls">
+        <button id="btn-undo" class="tool" aria-label="Undo">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          <span>Undo</span>
+        </button>
+        <button id="btn-erase" class="tool" aria-label="Erase">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8L3 15a2 2 0 0 1 0-2.8l9-9a2 2 0 0 1 2.8 0l5.2 5.2a2 2 0 0 1 0 2.8L13 18"/></svg>
+          <span>Erase</span>
+        </button>
+        <button id="btn-notes" class="tool" aria-label="Toggle notes mode" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          <span>Notes</span>
+        </button>
+        <button id="btn-trial" class="tool" aria-label="Toggle trial mode" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          <span>Trial</span>
+        </button>
+        <button id="btn-hint" class="tool" aria-label="Hint">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>
+          <span>Hint</span>
+        </button>
+      </div>
+
+      <button id="btn-clear-trial" class="hidden">Erase all trial entries</button>
+
+      <div id="pad" aria-label="Number pad"></div>
+    </main>
+
+    <div id="modal-overlay" class="hidden">
+      <div id="modal" role="dialog" aria-modal="true">
+        <button id="modal-close" class="icon-btn" aria-label="Close">&times;</button>
+        <div id="modal-content"></div>
+      </div>
     </div>
+  </div>
 
-    <div class="controls">
-        <button class="btn" onclick="inputNum(1)">1</button>
-        <button class="btn" onclick="inputNum(2)">2</button>
-        <button class="btn" onclick="inputNum(3)">3</button>
-        <button class="btn" onclick="inputNum(4)">4</button>
-        <button class="btn" onclick="inputNum(5)">5</button>
-        <button class="btn" onclick="inputNum(6)">6</button>
-        <button class="btn" onclick="inputNum(7)">7</button>
-        <button class="btn" onclick="inputNum(8)">8</button>
-        <button class="btn" onclick="inputNum(9)">9</button>
-        <button class="btn btn-del" onclick="inputNum(0)">Del</button>
-    </div>
-
-    <div class="menu-bar">
-        <button class="action-btn btn-note" id="btnNote" onclick="toggleNoteMode()">✎ Note</button>
-        <button class="action-btn btn-new" onclick="showNewGameModal()">New / Practice</button>
-    </div>
-
-    <div class="modal-overlay" id="modal">
-        <div class="modal">
-            <h2 style="margin-top:0;">Game Menu</h2>
-
-            <h3>Random Puzzles</h3>
-            <button class="level-btn" onclick="startRandom('easy')">Casual (Easy)</button>
-            <button class="level-btn" onclick="startRandom('medium')">Normal (Medium)</button>
-            <button class="level-btn" onclick="startRandom('hard')">Challenge (Hard)</button>
-
-            <h3>Technique Training (Infinite)</h3>
-            <button class="level-btn highlight" onclick="startPreset('xwing')">
-                X-Wing
-                <span>寻找 "二链列" (Target varies)</span> <span class="arrow">↻</span>
-            </button>
-            <button class="level-btn highlight" onclick="startPreset('ywing')">
-                Y-Wing (XY-Wing)
-                <span>三格强关联逻辑</span> <span class="arrow">↻</span>
-            </button>
-            <button class="level-btn highlight" onclick="startPreset('swordfish')">
-                Swordfish
-                <span>3x3 完美鱼形态</span> <span class="arrow">↻</span>
-            </button>
-
-            <button class="level-btn" style="background:transparent; color:#ff3b30; text-align:center; margin-top:10px;"
-                onclick="closeModal()">Cancel</button>
-        </div>
-    </div>
-
-    <script>
-        // --- Master Templates (Valid Puzzles) ---
-        // We will shuffle/rotate these to create infinite variations
-        const MASTERS = {
-            'xwing': {
-                name: 'X-Wing',
-                puzzle: "100000569492056108056109240009640801064010020218035604040500016905861402621400050",
-                target: 7, // Original target number
-                tip: "💡 提示：本题的突破口是数字 {n}。寻找两行，其中 {n} 都只出现在相同的两列中（构成矩形）。"
-            },
-            'ywing': {
-                name: 'Y-Wing',
-                puzzle: "000000000904607000076804100309701080008000300050308702007502610000403507000000000",
-                target: null, // Y-Wing involves 3 numbers, generic tip used
-                tip: "💡 提示：寻找三个格子的连锁：一个枢纽格 (Pivot) 和两个夹钳格 (Pincer)。如果你发现 (A,B), (B,C), (A,C) 的结构，就能排除共同影响区的 C。"
-            },
-            'swordfish': {
-                name: 'Swordfish',
-                puzzle: "000090000000000000000005200020700050508000701070002080001900000000000000000040000",
-                target: 3, // Original target number
-                tip: "💡 提示：本题的关键是数字 {n}。寻找 {n} 在三行中，分别只出现在完全相同的三个列里（Swordfish形态）。"
-            }
-        };
-
-        // --- Core Solver (MRV Optimized) ---
-        const BLANK = 0;
-        function isValid(board, row, col, num) {
-            for (let x = 0; x < 9; x++) if (board[row][x] === num || board[x][col] === num) return false;
-            const startRow = row - row % 3, startCol = col - col % 3;
-            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (board[i + startRow][j + startCol] === num) return false;
-            return true;
-        }
-
-        function solveSudoku(board) {
-            let bestRow = -1, bestCol = -1, minCandidates = 10;
-            for (let r = 0; r < 9; r++) {
-                for (let c = 0; c < 9; c++) {
-                    if (board[r][c] === BLANK) {
-                        let count = 0;
-                        for (let n = 1; n <= 9; n++) if (isValid(board, r, c, n)) count++;
-                        if (count === 0) return false;
-                        if (count < minCandidates) { minCandidates = count; bestRow = r; bestCol = c; }
-                    }
-                }
-                if (minCandidates === 1) break;
-            }
-            if (bestRow === -1) return true;
-            for (let num = 1; num <= 9; num++) {
-                if (isValid(board, bestRow, bestCol, num)) {
-                    board[bestRow][bestCol] = num;
-                    if (solveSudoku(board)) return true;
-                    board[bestRow][bestCol] = BLANK;
-                }
-            }
-            return false;
-        }
-
-        // --- Permutation Engine (The Magic) ---
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
-
-        function transformBoard(puzzleStr, originalTarget) {
-            // 1. Parse
-            let board = [];
-            let r = [], c_idx = 0;
-            for (let i = 0; i < 81; i++) {
-                r.push(parseInt(puzzleStr[i]));
-                if (r.length === 9) { board.push(r); r = []; }
-            }
-
-            // 2. Number Mapping (Permutation)
-            // e.g. map 7 -> 3, then 7s becomes 3s
-            let mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // 0 is unused
-            let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-            shuffleArray(nums);
-            let mapObj = {};
-            for (let i = 1; i <= 9; i++) mapObj[i] = nums[i - 1];
-
-            let newTarget = originalTarget ? mapObj[originalTarget] : null;
-
-            // Apply mapping
-            for (let row = 0; row < 9; row++) {
-                for (let col = 0; col < 9; col++) {
-                    if (board[row][col] !== 0) {
-                        board[row][col] = mapObj[board[row][col]];
-                    }
-                }
-            }
-
-            // 3. Rotation (Random 0, 90, 180, 270)
-            // Rotation preserves logic.
-            const rotations = Math.floor(Math.random() * 4);
-            for (let k = 0; k < rotations; k++) {
-                // Rotate 90 deg clockwise: new[i][j] = old[8-j][i]
-                let newBoard = Array.from({ length: 9 }, () => Array(9).fill(0));
-                for (let i = 0; i < 9; i++) {
-                    for (let j = 0; j < 9; j++) {
-                        newBoard[j][8 - i] = board[i][j];
-                    }
-                }
-                board = newBoard;
-            }
-
-            // 4. Solve for new solution
-            // Since we permuted, the old solution string is invalid. We must re-solve.
-            // MRV solver is fast enough (<50ms).
-            let solutionBoard = board.map(row => [...row]); // Deep copy
-            solveSudoku(solutionBoard);
-
-            return {
-                puzzle: board,
-                solution: solutionBoard,
-                newTarget: newTarget
-            };
-        }
-
-        // --- Generator (Random) ---
-        function generateRandomBoard(difficulty) {
-            let board = Array.from({ length: 9 }, () => Array(9).fill(0));
-            for (let i = 0; i < 9; i = i + 3) {
-                let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - 0.5);
-                for (let row = 0; row < 3; row++) for (let col = 0; col < 3; col++) board[i + row][i + col] = nums.pop();
-            }
-            solveSudoku(board);
-            const solution = board.map(row => [...row]);
-
-            let attempts = difficulty === 'easy' ? 30 : difficulty === 'medium' ? 45 : 52;
-            while (attempts > 0) {
-                let r = Math.floor(Math.random() * 9), c = Math.floor(Math.random() * 9);
-                while (board[r][c] === 0) { r = Math.floor(Math.random() * 9); c = Math.floor(Math.random() * 9); }
-                board[r][c] = 0;
-                attempts--;
-            }
-            return { puzzle: board, solution: solution };
-        }
-
-        // --- State & UI ---
-        let gameState = {
-            puzzle: [],
-            solution: [],
-            userGrid: [],
-            selectedIndex: -1,
-            isNoteMode: false
-        };
-
-        const gridEl = document.getElementById('grid');
-        const modal = document.getElementById('modal');
-        const diffLabel = document.getElementById('diffLabel');
-        const tipText = document.getElementById('tipText');
-
-        function initGridUI() {
-            gridEl.innerHTML = '';
-            for (let i = 0; i < 81; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.dataset.index = i;
-                cell.onclick = () => selectCell(i);
-                gridEl.appendChild(cell);
-            }
-        }
-
-        function renderCell(index) {
-            const cell = gridEl.children[index];
-            const data = gameState.userGrid[index];
-            const r = Math.floor(index / 9), c = index % 9;
-            const fixed = gameState.puzzle[r][c] !== 0;
-
-            cell.innerHTML = '';
-            cell.className = `cell ${fixed ? 'fixed' : ''}`;
-
-            if (data.val !== 0) {
-                const valDiv = document.createElement('div');
-                valDiv.className = 'cell-value';
-                valDiv.innerText = data.val;
-                cell.appendChild(valDiv);
-            } else {
-                const candGrid = document.createElement('div');
-                candGrid.className = 'candidate-grid';
-                for (let n = 1; n <= 9; n++) {
-                    const sp = document.createElement('div');
-                    sp.className = 'cand-num';
-                    if (data.notes.has(n)) sp.innerText = n;
-                    candGrid.appendChild(sp);
-                }
-                cell.appendChild(candGrid);
-            }
-        }
-
-        function selectCell(index) {
-            gameState.selectedIndex = index;
-            const r = Math.floor(index / 9), c = index % 9;
-            const val = gameState.userGrid[index].val;
-
-            Array.from(gridEl.children).forEach((cell, idx) => {
-                cell.classList.remove('selected', 'highlight', 'related', 'error');
-                const cr = Math.floor(idx / 9), cc = idx % 9;
-                if (idx === index) cell.classList.add('selected');
-                else if (cr === r || cc === c || (Math.floor(cr / 3) === Math.floor(r / 3) && Math.floor(cc / 3) === Math.floor(c / 3))) {
-                    cell.classList.add('related');
-                }
-                if (val !== 0 && gameState.userGrid[idx].val === val) cell.classList.add('highlight');
-                if (gameState.userGrid[idx].val !== 0 && gameState.userGrid[idx].val !== gameState.solution[cr][cc]) {
-                    cell.classList.add('error');
-                }
-            });
-        }
-
-        function inputNum(num) {
-            if (gameState.selectedIndex === -1) return;
-            const idx = gameState.selectedIndex;
-            const r = Math.floor(idx / 9), c = idx % 9;
-            if (gameState.puzzle[r][c] !== 0) return;
-
-            const data = gameState.userGrid[idx];
-            if (num === 0) { data.val = 0; }
-            else if (gameState.isNoteMode) {
-                if (data.val === 0) {
-                    if (data.notes.has(num)) data.notes.delete(num); else data.notes.add(num);
-                }
-            } else {
-                if (data.val === num) data.val = 0; else data.val = num;
-            }
-            renderCell(idx);
-            selectCell(idx);
-            checkWin();
-        }
-
-        function toggleNoteMode() {
-            gameState.isNoteMode = !gameState.isNoteMode;
-            document.getElementById('btnNote').classList.toggle('active', gameState.isNoteMode);
-        }
-
-        function checkWin() {
-            let filled = 0, correct = 0;
-            for (let i = 0; i < 81; i++) {
-                const r = Math.floor(i / 9), c = i % 9;
-                const val = gameState.userGrid[i].val;
-                if (val !== 0) { filled++; if (val === gameState.solution[r][c]) correct++; }
-            }
-            if (filled === 81 && correct === 81) setTimeout(() => alert("🎉 Solved!"), 100);
-        }
-
-        function startGame(puzzleBoard, solutionBoard, label, tip) {
-            gameState.puzzle = puzzleBoard;
-            gameState.solution = solutionBoard;
-            gameState.userGrid = [];
-
-            for (let r = 0; r < 9; r++) {
-                for (let c = 0; c < 9; c++) {
-                    gameState.userGrid.push({ val: gameState.puzzle[r][c], notes: new Set() });
-                }
-            }
-
-            diffLabel.innerText = label;
-            diffLabel.className = label.includes('Training') ? 'badge training' : 'badge';
-
-            if (tip) {
-                tipText.innerHTML = tip; // Use innerHTML to handle dynamic vars
-                tipText.style.display = 'block';
-            } else {
-                tipText.style.display = 'none';
-            }
-
-            gameState.selectedIndex = -1;
-            for (let i = 0; i < 81; i++) renderCell(i);
-            closeModal();
-        }
-
-        function startRandom(diff) {
-            const data = generateRandomBoard(diff);
-            const label = diff.charAt(0).toUpperCase() + diff.slice(1);
-            startGame(data.puzzle, data.solution, label, null);
-        }
-
-        function startPreset(key) {
-            const master = MASTERS[key];
-            // Generate a new permutation
-            const data = transformBoard(master.puzzle, master.target);
-
-            let tip = master.tip;
-            if (data.newTarget) {
-                tip = tip.replace('{n}', `<b>${data.newTarget}</b>`).replace('{n}', `<b>${data.newTarget}</b>`);
-            }
-
-            startGame(data.puzzle, data.solution, master.name + " Training", tip);
-        }
-
-        function showNewGameModal() { modal.style.display = 'flex'; }
-        function closeModal() { modal.style.display = 'none'; }
-
-        initGridUI();
-        startRandom('medium');
-
-    </script>
+  <script src="app.js"></script>
 </body>
-
 </html>
