@@ -125,6 +125,10 @@ header h1 {
   background: var(--border);
 }
 
+a.icon-btn {
+  text-decoration: none;
+}
+
 .text-btn {
   background: none;
   border: none;
