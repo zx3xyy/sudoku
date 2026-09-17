@@ -5,8 +5,16 @@
   var DIFFS = {
     easy: { label: "Easy", givens: 46, blurb: "Relaxed and friendly" },
     medium: { label: "Medium", givens: 36, blurb: "A satisfying challenge" },
-    hard: { label: "Hard", givens: 30, blurb: "For seasoned solvers" }
+    hard: { label: "Hard", givens: 30, blurb: "For seasoned solvers" },
+    extreme: { label: "Extreme", blurb: "Expert puzzles — advanced techniques required" }
   };
+  // Hand-picked expert puzzles. Random structure-preserving transformations below
+  // turn these into millions of equivalent boards without diluting their difficulty.
+  var EXTREME_PUZZLES = [
+    "100007090030020008009600500005300900010080002600004000300000010040000007007000300",
+    "800000000003600000070090200050007000000045700000100030001000068008500010090000400",
+    "005300000800000020070010500400005300010070006003200080060500009004000030000009700"
+  ];
   var STATS_KEY = "sudoku.stats.v1";
   var GAME_KEY = "sudoku.game.v1";
   var THEME_KEY = "sudoku.theme.v1";
@@ -89,7 +97,51 @@
     return total;
   }
 
+  function parsePuzzle(encoded) {
+    var grid = [];
+    for (var i = 0; i < encoded.length; i++) grid.push(parseInt(encoded.charAt(i), 10));
+    return grid;
+  }
+
+  // Relabel digits, rows, columns, bands, and stacks. These operations preserve
+  // uniqueness and the logical difficulty of the source puzzle.
+  function transformPuzzle(source) {
+    var digits = shuffled([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    var bands = shuffled([0, 1, 2]);
+    var stacks = shuffled([0, 1, 2]);
+    var rows = [], cols = [];
+    var b, i;
+    for (b = 0; b < 3; b++) {
+      var rowsInBand = shuffled([0, 1, 2]);
+      var colsInStack = shuffled([0, 1, 2]);
+      for (i = 0; i < 3; i++) {
+        rows.push(bands[b] * 3 + rowsInBand[i]);
+        cols.push(stacks[b] * 3 + colsInStack[i]);
+      }
+    }
+    var transpose = Math.random() < 0.5;
+    var result = new Array(81);
+    for (var r = 0; r < 9; r++) {
+      for (var c = 0; c < 9; c++) {
+        var oldR = transpose ? rows[c] : rows[r];
+        var oldC = transpose ? cols[r] : cols[c];
+        var value = source[oldR * 9 + oldC];
+        result[r * 9 + c] = value === 0 ? 0 : digits[value - 1];
+      }
+    }
+    return result;
+  }
+
+  function generateExtreme() {
+    var encoded = EXTREME_PUZZLES[Math.floor(Math.random() * EXTREME_PUZZLES.length)];
+    var puzzle = transformPuzzle(parsePuzzle(encoded));
+    var solution = puzzle.slice();
+    fillGrid(solution);
+    return { puzzle: puzzle, solution: solution };
+  }
+
   function generate(diffKey) {
+    if (diffKey === "extreme") return generateExtreme();
     var solution = new Array(81);
     for (var i = 0; i < 81; i++) solution[i] = 0;
     fillGrid(solution);
@@ -187,11 +239,12 @@
   }
 
   function defaultStats() {
-    return { played: 0, won: 0, best: { easy: null, medium: null, hard: null } };
+    return { played: 0, won: 0, best: { easy: null, medium: null, hard: null, extreme: null } };
   }
   function getStats() {
     var s = loadJSON(STATS_KEY, null);
     if (!s || typeof s.played !== "number" || !s.best) return defaultStats();
+    if (s.best.extreme === undefined) s.best.extreme = null;
     return s;
   }
   function saveStats(s) { saveJSON(STATS_KEY, s); }
@@ -630,7 +683,7 @@
     var s = getStats();
     s.won++;
     var best = s.best[difficulty];
-    if (best === null || elapsed < best) s.best[difficulty] = elapsed;
+    if (best === null || best === undefined || elapsed < best) s.best[difficulty] = elapsed;
     saveStats(s);
     setTimeout(function () { showWin(); }, 400);
   }
@@ -657,7 +710,7 @@
 
   function showDifficulty() {
     var html = "<h2>New Puzzle</h2><p>Choose a difficulty:</p>" + '<div class="modal-buttons">';
-    var keys = ["easy", "medium", "hard"];
+    var keys = ["easy", "medium", "hard", "extreme"];
     for (var k = 0; k < keys.length; k++) {
       var key = keys[k];
       html += '<button class="btn btn-secondary diff-btn" data-diff="' + key + '">' +
@@ -686,6 +739,7 @@
       statBlock(fmtBest(s.best.easy), "Easy") +
       statBlock(fmtBest(s.best.medium), "Medium") +
       statBlock(fmtBest(s.best.hard), "Hard") +
+      statBlock(fmtBest(s.best.extreme), "Extreme") +
       "</div>";
   }
 
