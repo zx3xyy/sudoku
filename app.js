@@ -6,8 +6,25 @@
     easy: { label: "Easy", givens: 46, blurb: "Relaxed and friendly" },
     medium: { label: "Medium", givens: 36, blurb: "A satisfying challenge" },
     hard: { label: "Hard", givens: 30, blurb: "For seasoned solvers" },
-    extreme: { label: "Extreme", blurb: "Expert puzzles — advanced techniques required" }
+    expert: { label: "Expert", blurb: "Advanced logic, but no blind guessing" },
+    extreme: { label: "Extreme", blurb: "Legendary puzzles — genuinely brutal" }
   };
+  // Every Expert seed is uniquely solvable with singles, locked candidates,
+  // and naked pairs. This makes the step up from Hard noticeable but fair.
+  var EXPERT_PUZZLES = [
+    "608000240054000800010034000000001400800050007002600000000180090003000510046000702",
+    "009703000020000500600290071050001040000020000090600010240067008007000090000104700",
+    "980000006040007000010500400835900000000703000000002943007005030000100090300000014",
+    "030004100800009730000307800900801000200000001000706005002603000089400003007500010",
+    "006045000000000012708001003040600200000307000005004070200400106570000000000530800",
+    "500090082000003001030010040075006000008000600000900720040060030800400000290080004",
+    "050080000000200793900000040000378650000000000043961000030000005768002000000090020",
+    "600000400000600800000005097800002006370906041100700008780500000009007000002000004",
+    "005003740400100060080040200001005037000000000390700100009060010040008002032900500",
+    "070300040019240080400000000500003000081704290000100008000000004060081920020006030",
+    "020090040000604090000002006650009800100803005002500017700200000060905000080070050",
+    "010080000025000010790000005000360040001704500040019000400000032070000150000030080"
+  ];
   // Hand-picked expert puzzles. Random structure-preserving transformations below
   // turn these into millions of equivalent boards without diluting their difficulty.
   var EXTREME_PUZZLES = [
@@ -132,8 +149,8 @@
     return result;
   }
 
-  function generateExtreme() {
-    var encoded = EXTREME_PUZZLES[Math.floor(Math.random() * EXTREME_PUZZLES.length)];
+  function generateFromBank(bank) {
+    var encoded = bank[Math.floor(Math.random() * bank.length)];
     var puzzle = transformPuzzle(parsePuzzle(encoded));
     var solution = puzzle.slice();
     fillGrid(solution);
@@ -141,7 +158,8 @@
   }
 
   function generate(diffKey) {
-    if (diffKey === "extreme") return generateExtreme();
+    if (diffKey === "expert") return generateFromBank(EXPERT_PUZZLES);
+    if (diffKey === "extreme") return generateFromBank(EXTREME_PUZZLES);
     var solution = new Array(81);
     for (var i = 0; i < 81; i++) solution[i] = 0;
     fillGrid(solution);
@@ -239,11 +257,12 @@
   }
 
   function defaultStats() {
-    return { played: 0, won: 0, best: { easy: null, medium: null, hard: null, extreme: null } };
+    return { played: 0, won: 0, best: { easy: null, medium: null, hard: null, expert: null, extreme: null } };
   }
   function getStats() {
     var s = loadJSON(STATS_KEY, null);
     if (!s || typeof s.played !== "number" || !s.best) return defaultStats();
+    if (s.best.expert === undefined) s.best.expert = null;
     if (s.best.extreme === undefined) s.best.extreme = null;
     return s;
   }
@@ -710,7 +729,7 @@
 
   function showDifficulty() {
     var html = "<h2>New Puzzle</h2><p>Choose a difficulty:</p>" + '<div class="modal-buttons">';
-    var keys = ["easy", "medium", "hard", "extreme"];
+    var keys = ["easy", "medium", "hard", "expert", "extreme"];
     for (var k = 0; k < keys.length; k++) {
       var key = keys[k];
       html += '<button class="btn btn-secondary diff-btn" data-diff="' + key + '">' +
@@ -739,6 +758,7 @@
       statBlock(fmtBest(s.best.easy), "Easy") +
       statBlock(fmtBest(s.best.medium), "Medium") +
       statBlock(fmtBest(s.best.hard), "Hard") +
+      statBlock(fmtBest(s.best.expert), "Expert") +
       statBlock(fmtBest(s.best.extreme), "Extreme") +
       "</div>";
   }

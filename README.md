@@ -7,7 +7,8 @@ A mobile-friendly Sudoku game with notes, trial mode, hints, and undo. Play on a
 ## Features
 
 - New puzzles every game in Easy / Medium / Hard (generated in-browser, guaranteed unique solution)
-- **Extreme** mode uses expert-level, uniquely solvable puzzles with randomized digit and board transformations
+- **Expert** mode requires advanced logic such as locked candidates and naked pairs, without blind guessing
+- **Extreme** mode keeps the legendary, genuinely brutal puzzles for an optional final tier
 - **Notes** — pencil-mark candidate digits in any empty cell
 - **Trial mode** — try guesses shown in gold, then erase them all at once with one tap
 - **Erase**, **Undo**, **Hint**, mistake counter, timer with pause
