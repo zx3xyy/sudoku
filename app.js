@@ -318,7 +318,7 @@
   // ---------- helpers ----------
   function isGiven(i) { return puzzle[i] !== 0; }
   function isWrong(i) {
-    return !isGiven(i) && values[i] !== 0 && values[i] !== solution[i];
+    return !isGiven(i) && !trial[i] && values[i] !== 0 && values[i] !== solution[i];
   }
   function trialCount() {
     var n = 0;
@@ -569,6 +569,13 @@
       }
       pushUndo();
       trial[i] = trialMode;
+      if (!trialMode) {
+        if (d !== solution[i]) {
+          mistakes++;
+        } else {
+          removePeerNotes(i, d);
+        }
+      }
       afterChange();
       return;
     }
@@ -576,10 +583,12 @@
     values[i] = d;
     notes[i] = [];
     trial[i] = trialMode;
-    if (d !== solution[i]) {
-      mistakes++;
-    } else {
-      removePeerNotes(i, d);
+    if (!trialMode) {
+      if (d !== solution[i]) {
+        mistakes++;
+      } else {
+        removePeerNotes(i, d);
+      }
     }
     afterChange();
   }
@@ -695,7 +704,7 @@
   function checkWin() {
     if (status !== "playing") return;
     for (var i = 0; i < 81; i++) {
-      if (values[i] !== solution[i]) return;
+      if (trial[i] || values[i] !== solution[i]) return;
     }
     status = "won";
     saveGame();
