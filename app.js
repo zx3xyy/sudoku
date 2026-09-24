@@ -434,9 +434,12 @@
   }
 
   function renderPad() {
+    // Trial entries are hypotheses, so they must not consume the
+    // normal number-pad availability. Otherwise turning Trial off can
+    // make every digit look depleted until the trial entries are erased.
     var counts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     for (var i = 0; i < 81; i++) {
-      if (values[i] !== 0) counts[values[i]]++;
+      if (values[i] !== 0 && !trial[i]) counts[values[i]]++;
     }
     for (var d = 1; d <= 9; d++) {
       var left = Math.max(0, 9 - counts[d]);
