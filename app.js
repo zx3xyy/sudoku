@@ -459,11 +459,15 @@
     else trialBtn.classList.remove("active");
     trialBtn.setAttribute("aria-pressed", trialMode ? "true" : "false");
     var n = trialCount();
+    var commitTrialBtn = document.getElementById("btn-commit-trial");
     if (n > 0) {
       clearTrialBtn.classList.remove("hidden");
       clearTrialBtn.textContent = "Erase all trial entries (" + n + ")";
+      commitTrialBtn.classList.remove("hidden");
+      commitTrialBtn.textContent = "Commit all trial entries (" + n + ")";
     } else {
       clearTrialBtn.classList.add("hidden");
+      commitTrialBtn.classList.add("hidden");
     }
   }
 
@@ -632,6 +636,25 @@
     }
     afterChange();
     toast(targets.length === 1 ? "1 trial entry erased" : targets.length + " trial entries erased");
+  }
+
+  function commitTrial() {
+    if (status !== "playing" || paused) return;
+    var targets = [];
+    for (var i = 0; i < 81; i++) {
+      if (trial[i] && values[i] !== 0) targets.push(i);
+    }
+    if (targets.length === 0) return;
+    pushUndo();
+    for (var t = 0; t < targets.length; t++) {
+      var idx = targets[t];
+      trial[idx] = false;
+      if (values[idx] === solution[idx]) {
+        removePeerNotes(idx, values[idx]);
+      }
+    }
+    afterChange();
+    toast(targets.length === 1 ? "1 trial entry committed" : targets.length + " trial entries committed");
   }
 
   function hint() {
@@ -832,6 +855,7 @@
   trialBtn.addEventListener("click", toggleTrial);
   document.getElementById("btn-hint").addEventListener("click", hint);
   clearTrialBtn.addEventListener("click", clearTrial);
+  document.getElementById("btn-commit-trial").addEventListener("click", commitTrial);
 
   document.addEventListener("keydown", function (e) {
     if (!overlay.classList.contains("hidden")) {
