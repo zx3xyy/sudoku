@@ -354,6 +354,21 @@ main {
   background: var(--trial-active-bg);
 }
 
+#trial-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  flex: 0 0 auto;
+}
+
+#trial-actions button {
+  width: 100%;
+  margin: 0;
+}
+
 #btn-clear-trial {
   display: block;
   width: 100%;
